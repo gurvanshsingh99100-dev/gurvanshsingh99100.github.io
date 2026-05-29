@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Rating Component</title>
+    <style>
+        body {
+            background-color: #3b82f6; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; 
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .rating-card {
+            background: rgba(255, 255, 255, 0.2); 
+            backdrop-filter: blur(10px); 
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); 
+            width: 300px;
+        }
+
+        .stars-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .stars-container input[type="radio"] { display: none; }
+
+        .star {
+            font-size: 40px;
+            color: #ffd700; 
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .star-filled-glow { text-shadow: 0 0 10px #f0e68c, 0 0 20px #f0e68c; }
+
+        #submit-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 20px;
+            background-color: white;
+            color: #3b82f6;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* The Live Table at the Bottom Right */
+        .submission-details {
+            position: fixed; 
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.8); 
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            width: 200px;
+            font-size: 13px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .submission-details table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .submission-details th { text-align: left; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
+        .submission-details td { padding: 5px 0; }
+        .count-val { text-align: right; font-weight: bold; }
+
+        /* Reset Button Style */
+        #reset-local-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+        #reset-local-btn:hover { background: rgba(255,255,255,0.1); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); display: none; 
+            justify-content: center; align-items: center;
+            z-index: 2000;
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; text-align: center; color: #333; }
+        #modal-ok-btn { background: #3b82f6; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px;}
+    </style>
+</head>
+<body>
+
+    <div class="rating-card">
+        <h2>How was your experience?</h2>
+        <div class="stars-container">
+            <input type="radio" id="star1" name="rating" value="1" /> <label for="star1" class="star">&#9734;</label>
+            <input type="radio" id="star2" name="rating" value="2" /> <label for="star2" class="star">&#9734;</label>
+            <input type="radio" id="star3" name="rating" value="3" /> <label for="star3" class="star">&#9734;</label>
+            <input type="radio" id="star4" name="rating" value="4" /> <label for="star4" class="star">&#9734;</label>
+            <input type="radio" id="star5" name="rating" value="5" /> <label for="star5" class="star">&#9734;</label>
+        </div>
+        <button id="submit-btn">Submit</button>
+    </div>
+
+    <div class="submission-details">
+        <table>
+            <tr><th>Rating</th><th class="count-val">Count</th></tr>
+            <tr><td>5 Stars</td><td class="count-val" id="disp-5">0</td></tr>
+            <tr><td>4 Stars</td><td class="count-val" id="disp-4">0</td></tr>
+            <tr><td>3 & Below</td><td class="count-val" id="disp-below">0</td></tr>
+        </table>
+        <button id="reset-local-btn">Reset Website View</button>
+    </div>
+
+    <div class="modal-overlay" id="thank-you-modal">
+        <div class="modal-content">
+            <h3>Feedback Received!</h3>
+            <p>Your rating: <span id="modal-rating-text" style="font-weight: bold;"></span></p>
+            <button id="modal-ok-btn">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE WITH YOUR GOOGLE URL
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz1TcoLjRzzDefAm87y64pJ5QmIR_5QodRHTnSkjPEw2waf4__6IVaEp0slsu4F2mvZbw/exec"; 
+
+        // Load existing counts from memory or start at 0
+        let counts = JSON.parse(localStorage.getItem('localRatings')) || { 5: 0, 4: 0, below: 0 };
+
+        const starLabels = document.querySelectorAll('.star');
+        const submitBtn = document.getElementById('submit-btn');
+        const resetBtn = document.getElementById('reset-local-btn');
+
+        // Update display on load
+        function updateTableDisplay() {
+            document.getElementById('disp-5').textContent = counts[5];
+            document.getElementById('disp-4').textContent = counts[4];
+            document.getElementById('disp-below').textContent = counts.below;
+            localStorage.setItem('localRatings', JSON.stringify(counts));
+        }
+        updateTableDisplay();
+
+        // Star visuals
+        function resetStars() {
+            const checked = document.querySelector('input[name="rating"]:checked');
+            starLabels.forEach(l => {
+                l.innerHTML = '☆';
+                l.classList.remove('star-filled-glow');
+            });
+            if (checked) {
+                let curr = document.querySelector(`label[for="${checked.id}"]`);
+                while(curr) {
+                    curr.innerHTML = '★';
+                    curr.classList.add('star-filled-glow');
+                    curr = curr.previousElementSibling;
+                    while(curr && curr.nodeName !== 'LABEL') curr = curr.previousElementSibling;
+                }
+            }
+        }
+
+        starLabels.forEach(l => {
+            l.addEventListener('click', () => setTimeout(resetStars, 10));
+        });
+
+        // Submit Logic
+        submitBtn.addEventListener('click', () => {
+            const selected = document.querySelector('input[name="rating"]:checked');
+            if (!selected) return alert("Select a star!");
+
+            const val = parseInt(selected.value);
+
+            // Update website counts
+            if (val === 5) counts[5]++;
+            else if (val === 4) counts[4]++;
+            else counts.below++;
+            updateTableDisplay();
+
+            // Send to Google Sheets
+            fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ rating: val })
+            });
+
+            document.getElementById('modal-rating-text').textContent = val + " Stars";
+            document.getElementById('thank-you-modal').style.display = 'flex';
+            selected.checked = false;
+            resetStars();
+        });
+
+        // RESET BUTTON LOGIC (Website only)
+        resetBtn.addEventListener('click', () => {
+            if(confirm("Reset the website counts? (Google Sheet data will remain safe)")) {
+                counts = { 5: 0, 4: 0, below: 0 };
+                updateTableDisplay();
+            }
+        });
+
+        document.getElementById('modal-ok-btn').onclick = () => {
+            document.getElementById('thank-you-modal').style.display = 'none';
+        };
+    </script>
+</body>
+</html>
