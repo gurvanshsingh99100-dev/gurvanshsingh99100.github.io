@@ -1,213 +1,692 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Rating Component</title>
-    <style>
-        body {
-            background-color: #3b82f6; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh; 
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sleep Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --surface: #111120;
+    --card: #16162a;
+    --border: #2a2a4a;
+    --accent: #7c6aff;
+    --accent2: #ff6ab0;
+    --accent3: #6af0ff;
+    --text: #e8e8ff;
+    --muted: #7070a0;
+    --good: #4fffb0;
+    --warn: #ffcc44;
+    --bad: #ff5577;
+  }
 
-        .rating-card {
-            background: rgba(255, 255, 255, 0.2); 
-            backdrop-filter: blur(10px); 
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            color: white;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); 
-            width: 300px;
-        }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .stars-container {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0;
-        }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        .stars-container input[type="radio"] { display: none; }
+  /* Stars background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 35%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 95% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 40%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(2px 2px at 60% 70%, rgba(124,106,255,0.5) 0%, transparent 100%),
+      radial-gradient(2px 2px at 15% 50%, rgba(106,240,255,0.4) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
 
-        .star {
-            font-size: 40px;
-            color: #ffd700; 
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
 
-        .star-filled-glow { text-shadow: 0 0 10px #f0e68c, 0 0 20px #f0e68c; }
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 50px;
+    animation: fadeDown 0.8s ease;
+  }
 
-        #submit-btn {
-            padding: 10px 25px;
-            border: none;
-            border-radius: 20px;
-            background-color: white;
-            color: #3b82f6;
-            font-weight: bold;
-            cursor: pointer;
-        }
+  .moon-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+    animation: float 4s ease-in-out infinite;
+  }
 
-        /* The Live Table at the Bottom Right */
-        .submission-details {
-            position: fixed; 
-            bottom: 15px;
-            right: 15px;
-            background: rgba(0, 0, 0, 0.8); 
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            width: 200px;
-            font-size: 13px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        
-        .submission-details table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-        .submission-details th { text-align: left; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
-        .submission-details td { padding: 5px 0; }
-        .count-val { text-align: right; font-weight: bold; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
 
-        /* Reset Button Style */
-        #reset-local-btn {
-            width: 100%;
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
-            padding: 5px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: background 0.2s;
-        }
-        #reset-local-btn:hover { background: rgba(255,255,255,0.1); }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
 
-        /* Modal */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); display: none; 
-            justify-content: center; align-items: center;
-            z-index: 2000;
-        }
-        .modal-content { background: white; padding: 25px; border-radius: 10px; text-align: center; color: #333; }
-        #modal-ok-btn { background: #3b82f6; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; margin-top: 10px;}
-    </style>
+  header p {
+    color: var(--muted);
+    margin-top: 8px;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+  }
+
+  /* Log form */
+  .log-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease 0.1s both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .log-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(124,106,255,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .log-card h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 24px;
+    color: var(--accent3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.15);
+  }
+
+  .field input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+  }
+
+  .mood-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .mood-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mood-btn:hover, .mood-btn.active {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.15);
+    color: var(--text);
+    transform: scale(1.1);
+  }
+
+  .btn-log {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 8px;
+  }
+
+  .btn-log:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-log:active { transform: translateY(0); }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease 0.2s both;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+
+  .stat-card:hover { transform: translateY(-3px); }
+
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Chart */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease 0.3s both;
+  }
+
+  .chart-card h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 120px;
+    padding-bottom: 4px;
+  }
+
+  .bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    min-height: 4px;
+    transition: height 0.5s ease;
+    position: relative;
+  }
+
+  .bar-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .bar-val {
+    font-size: 0.65rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Recommended line */
+  .chart-ref {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .chart-ref-line {
+    height: 1px;
+    width: 30px;
+    border-top: 1px dashed var(--good);
+  }
+
+  /* History */
+  .history-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    animation: fadeUp 0.8s ease 0.4s both;
+  }
+
+  .history-card h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  .entry {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeIn 0.4s ease;
+  }
+
+  .entry:last-child { border-bottom: none; }
+
+  .entry-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+    min-width: 90px;
+  }
+
+  .entry-hours {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+
+  .entry-quality {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .q-good { background: rgba(79,255,176,0.12); color: var(--good); }
+  .q-ok   { background: rgba(255,204,68,0.12);  color: var(--warn); }
+  .q-bad  { background: rgba(255,85,119,0.12);  color: var(--bad); }
+
+  .entry-mood { font-size: 1.1rem; }
+
+  .entry-notes {
+    font-size: 0.72rem;
+    color: var(--muted);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .entry-del {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px;
+    transition: color 0.2s;
+    margin-left: auto;
+  }
+
+  .entry-del:hover { color: var(--bad); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .empty-state .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
 </head>
 <body>
+<div class="container">
 
-    <div class="rating-card">
-        <h2>How was your experience?</h2>
-        <div class="stars-container">
-            <input type="radio" id="star1" name="rating" value="1" /> <label for="star1" class="star">&#9734;</label>
-            <input type="radio" id="star2" name="rating" value="2" /> <label for="star2" class="star">&#9734;</label>
-            <input type="radio" id="star3" name="rating" value="3" /> <label for="star3" class="star">&#9734;</label>
-            <input type="radio" id="star4" name="rating" value="4" /> <label for="star4" class="star">&#9734;</label>
-            <input type="radio" id="star5" name="rating" value="5" /> <label for="star5" class="star">&#9734;</label>
+  <header>
+    <span class="moon-icon">🌙</span>
+    <h1>Sleep Tracker</h1>
+    <p>// monitor · analyse · improve your rest</p>
+  </header>
+
+  <!-- Log Form -->
+  <div class="log-card">
+    <h2>// log tonight's sleep</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="inp-date">
+      </div>
+      <div class="field">
+        <label>Bedtime</label>
+        <input type="time" id="inp-bed">
+      </div>
+      <div class="field">
+        <label>Wake time</label>
+        <input type="time" id="inp-wake">
+      </div>
+      <div class="field">
+        <label>Quality</label>
+        <select id="inp-quality">
+          <option value="good">😴 Good</option>
+          <option value="ok">😐 OK</option>
+          <option value="bad">😩 Bad</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label>Morning mood</label>
+      <div class="mood-row" id="mood-row">
+        <button class="mood-btn" data-mood="😄">😄</button>
+        <button class="mood-btn" data-mood="🙂">🙂</button>
+        <button class="mood-btn" data-mood="😐">😐</button>
+        <button class="mood-btn" data-mood="😴">😴</button>
+        <button class="mood-btn" data-mood="😣">😣</button>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <label>Notes (optional)</label>
+      <input type="text" id="inp-notes" placeholder="e.g. had coffee late, vivid dreams…" style="width:100%">
+    </div>
+    <button class="btn-log" onclick="logSleep()">+ Log Sleep</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-val" id="stat-avg">—</div>
+      <div class="stat-label">Avg hours / night</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-total">—</div>
+      <div class="stat-label">Total entries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-best">—</div>
+      <div class="stat-label">Best night</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-streak">—</div>
+      <div class="stat-label">8h+ streak</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-card">
+    <h2>// last 7 nights</h2>
+    <div class="chart-bars" id="chart-bars">
+      <div class="empty-state" style="width:100%"><span class="icon">📊</span>No data yet</div>
+    </div>
+    <div class="chart-ref">
+      <div class="chart-ref-line"></div>
+      Recommended: 8 hours
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-card">
+    <h2>// sleep history</h2>
+    <div id="history-list">
+      <div class="empty-state"><span class="icon">🌙</span>No sleep logged yet.<br>Add your first entry above!</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // Set today's date as default
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('inp-date').value = today;
+
+  // Mood selection
+  let selectedMood = '🙂';
+  document.getElementById('mood-row').addEventListener('click', e => {
+    const btn = e.target.closest('.mood-btn');
+    if (!btn) return;
+    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedMood = btn.dataset.mood;
+  });
+  document.querySelector('[data-mood="🙂"]').classList.add('active');
+
+  // Load data
+  function getData() {
+    return JSON.parse(localStorage.getItem('sleepData') || '[]');
+  }
+  function saveData(d) {
+    localStorage.setItem('sleepData', JSON.stringify(d));
+  }
+
+  function calcHours(bed, wake) {
+    const [bh, bm] = bed.split(':').map(Number);
+    const [wh, wm] = wake.split(':').map(Number);
+    let mins = (wh * 60 + wm) - (bh * 60 + bm);
+    if (mins < 0) mins += 1440;
+    return +(mins / 60).toFixed(1);
+  }
+
+  function logSleep() {
+    const date    = document.getElementById('inp-date').value;
+    const bed     = document.getElementById('inp-bed').value;
+    const wake    = document.getElementById('inp-wake').value;
+    const quality = document.getElementById('inp-quality').value;
+    const notes   = document.getElementById('inp-notes').value.trim();
+
+    if (!date || !bed || !wake) { showToast('⚠️ Fill in date, bedtime & wake time!'); return; }
+
+    const hours = calcHours(bed, wake);
+    const data = getData();
+
+    // Replace if same date
+    const idx = data.findIndex(e => e.date === date);
+    const entry = { date, bed, wake, hours, quality, mood: selectedMood, notes };
+    if (idx >= 0) data[idx] = entry; else data.unshift(entry);
+    data.sort((a, b) => b.date.localeCompare(a.date));
+
+    saveData(data);
+    render();
+    document.getElementById('inp-notes').value = '';
+    showToast(`✓ Logged ${hours}h for ${formatDate(date)}`);
+  }
+
+  function deleteEntry(date) {
+    const data = getData().filter(e => e.date !== date);
+    saveData(data);
+    render();
+  }
+
+  function formatDate(d) {
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'2-digit' });
+  }
+
+  function qualityClass(q) {
+    return q === 'good' ? 'q-good' : q === 'ok' ? 'q-ok' : 'q-bad';
+  }
+
+  function qualityLabel(q) {
+    return q === 'good' ? 'Good' : q === 'ok' ? 'OK' : 'Bad';
+  }
+
+  function hoursColor(h) {
+    if (h >= 7.5) return 'var(--good)';
+    if (h >= 6)   return 'var(--warn)';
+    return 'var(--bad)';
+  }
+
+  function render() {
+    const data = getData();
+
+    // Stats
+    if (data.length === 0) {
+      ['stat-avg','stat-total','stat-best','stat-streak'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+    } else {
+      const avg  = (data.reduce((s,e) => s + e.hours, 0) / data.length).toFixed(1);
+      const best = Math.max(...data.map(e => e.hours));
+      // streak of 8h+
+      let streak = 0;
+      const sorted = [...data].sort((a,b) => b.date.localeCompare(a.date));
+      for (const e of sorted) { if (e.hours >= 8) streak++; else break; }
+
+      document.getElementById('stat-avg').textContent   = avg + 'h';
+      document.getElementById('stat-total').textContent = data.length;
+      document.getElementById('stat-best').textContent  = best + 'h';
+      document.getElementById('stat-streak').textContent = streak + ' 🔥';
+    }
+
+    // Chart (last 7)
+    const chartEl = document.getElementById('chart-bars');
+    const last7 = [...data].sort((a,b) => a.date.localeCompare(b.date)).slice(-7);
+    if (last7.length === 0) {
+      chartEl.innerHTML = '<div class="empty-state" style="width:100%"><span class="icon">📊</span>No data yet</div>';
+    } else {
+      const maxH = Math.max(...last7.map(e => e.hours), 10);
+      chartEl.innerHTML = last7.map(e => {
+        const pct = (e.hours / maxH * 100).toFixed(1);
+        const color = hoursColor(e.hours);
+        const day = new Date(e.date + 'T12:00:00').toLocaleDateString('en-IN', { weekday:'short' });
+        return `<div class="bar-wrap">
+          <div class="bar-val" style="color:${color}">${e.hours}h</div>
+          <div class="bar" style="height:${pct}%;background:linear-gradient(to top,${color}99,${color}33)"></div>
+          <div class="bar-label">${day}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // History list
+    const listEl = document.getElementById('history-list');
+    if (data.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><span class="icon">🌙</span>No sleep logged yet.<br>Add your first entry above!</div>';
+    } else {
+      listEl.innerHTML = data.map(e => `
+        <div class="entry">
+          <span class="entry-date">${formatDate(e.date)}</span>
+          <span class="entry-hours" style="color:${hoursColor(e.hours)}">${e.hours}h</span>
+          <span class="entry-quality ${qualityClass(e.quality)}">${qualityLabel(e.quality)}</span>
+          <span class="entry-mood">${e.mood}</span>
+          ${e.notes ? `<span class="entry-notes">${e.notes}</span>` : '<span class="entry-notes"></span>'}
+          <button class="entry-del" onclick="deleteEntry('${e.date}')" title="Delete">✕</button>
         </div>
-        <button id="submit-btn">Submit</button>
-    </div>
+      `).join('');
+    }
+  }
 
-    <div class="submission-details">
-        <table>
-            <tr><th>Rating</th><th class="count-val">Count</th></tr>
-            <tr><td>5 Stars</td><td class="count-val" id="disp-5">0</td></tr>
-            <tr><td>4 Stars</td><td class="count-val" id="disp-4">0</td></tr>
-            <tr><td>3 & Below</td><td class="count-val" id="disp-below">0</td></tr>
-        </table>
-        <button id="reset-local-btn">Reset Website View</button>
-    </div>
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
 
-    <div class="modal-overlay" id="thank-you-modal">
-        <div class="modal-content">
-            <h3>Feedback Received!</h3>
-            <p>Your rating: <span id="modal-rating-text" style="font-weight: bold;"></span></p>
-            <button id="modal-ok-btn">OK</button>
-        </div>
-    </div>
-
-    <script>
-        // REPLACE WITH YOUR GOOGLE URL
-        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz1TcoLjRzzDefAm87y64pJ5QmIR_5QodRHTnSkjPEw2waf4__6IVaEp0slsu4F2mvZbw/exec"; 
-
-        // Load existing counts from memory or start at 0
-        let counts = JSON.parse(localStorage.getItem('localRatings')) || { 5: 0, 4: 0, below: 0 };
-
-        const starLabels = document.querySelectorAll('.star');
-        const submitBtn = document.getElementById('submit-btn');
-        const resetBtn = document.getElementById('reset-local-btn');
-
-        // Update display on load
-        function updateTableDisplay() {
-            document.getElementById('disp-5').textContent = counts[5];
-            document.getElementById('disp-4').textContent = counts[4];
-            document.getElementById('disp-below').textContent = counts.below;
-            localStorage.setItem('localRatings', JSON.stringify(counts));
-        }
-        updateTableDisplay();
-
-        // Star visuals
-        function resetStars() {
-            const checked = document.querySelector('input[name="rating"]:checked');
-            starLabels.forEach(l => {
-                l.innerHTML = '☆';
-                l.classList.remove('star-filled-glow');
-            });
-            if (checked) {
-                let curr = document.querySelector(`label[for="${checked.id}"]`);
-                while(curr) {
-                    curr.innerHTML = '★';
-                    curr.classList.add('star-filled-glow');
-                    curr = curr.previousElementSibling;
-                    while(curr && curr.nodeName !== 'LABEL') curr = curr.previousElementSibling;
-                }
-            }
-        }
-
-        starLabels.forEach(l => {
-            l.addEventListener('click', () => setTimeout(resetStars, 10));
-        });
-
-        // Submit Logic
-        submitBtn.addEventListener('click', () => {
-            const selected = document.querySelector('input[name="rating"]:checked');
-            if (!selected) return alert("Select a star!");
-
-            const val = parseInt(selected.value);
-
-            // Update website counts
-            if (val === 5) counts[5]++;
-            else if (val === 4) counts[4]++;
-            else counts.below++;
-            updateTableDisplay();
-
-            // Send to Google Sheets
-            fetch(GOOGLE_SHEET_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ rating: val })
-            });
-
-            document.getElementById('modal-rating-text').textContent = val + " Stars";
-            document.getElementById('thank-you-modal').style.display = 'flex';
-            selected.checked = false;
-            resetStars();
-        });
-
-        // RESET BUTTON LOGIC (Website only)
-        resetBtn.addEventListener('click', () => {
-            if(confirm("Reset the website counts? (Google Sheet data will remain safe)")) {
-                counts = { 5: 0, 4: 0, below: 0 };
-                updateTableDisplay();
-            }
-        });
-
-        document.getElementById('modal-ok-btn').onclick = () => {
-            document.getElementById('thank-you-modal').style.display = 'none';
-        };
-    </script>
+  render();
+</script>
 </body>
 </html>
