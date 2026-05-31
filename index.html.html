@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sleep Tracker – Compare with Friends</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #09090f;
+  --surface: #111118;
+  --card: #14141f;
+  --border: #252538;
+  --accent: #6c63ff;
+  --accent2: #ff5fa0;
+  --accent3: #4fd9ff;
+  --text: #e6e6f8;
+  --muted: #6a6a90;
+  --good: #3fffa8;
+  --warn: #ffcc44;
+  --bad: #ff4d6a;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; min-height:100vh; overflow-x:hidden; }
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%,rgba(255,255,255,.35) 0%,transparent 100%),
+    radial-gradient(1px 1px at 33% 62%,rgba(255,255,255,.25) 0%,transparent 100%),
+    radial-gradient(1px 1px at 55% 8%, rgba(255,255,255,.4) 0%,transparent 100%),
+    radial-gradient(1px 1px at 78% 75%,rgba(255,255,255,.2) 0%,transparent 100%),
+    radial-gradient(1px 1px at 88% 30%,rgba(255,255,255,.35) 0%,transparent 100%),
+    radial-gradient(2px 2px at 65% 50%,rgba(108,99,255,.4) 0%,transparent 100%),
+    radial-gradient(2px 2px at 20% 85%,rgba(79,217,255,.3) 0%,transparent 100%);
+}
+.wrap { max-width:960px; margin:0 auto; padding:36px 18px; position:relative; z-index:1; }
+
+/* NAV TABS */
+header { text-align:center; margin-bottom:40px; animation:fadeDown .7s ease; }
+header .moon { font-size:2.8rem; display:block; animation:float 4s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+header h1 { font-family:'Syne',sans-serif; font-size:clamp(1.8rem,4vw,3rem); font-weight:800; background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+header p { color:var(--muted); font-size:.78rem; letter-spacing:.1em; margin-top:6px; }
+
+.tabs { display:flex; gap:4px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:5px; margin-bottom:32px; }
+.tab { flex:1; padding:10px; border:none; background:none; color:var(--muted); font-family:'Syne',sans-serif; font-size:.82rem; font-weight:600; letter-spacing:.04em; cursor:pointer; border-radius:10px; transition:all .2s; text-transform:uppercase; }
+.tab.active { background:var(--accent); color:#fff; }
+
+.page { display:none; animation:fadeUp .4s ease; }
+.page.active { display:block; }
+
+/* USERNAME MODAL */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:50; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal { background:var(--card); border:1px solid var(--border); border-radius:22px; padding:36px; width:min(380px,90vw); text-align:center; animation:fadeUp .4s ease; }
+.modal .moon-big { font-size:3rem; margin-bottom:16px; }
+.modal h2 { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; margin-bottom:8px; }
+.modal p { color:var(--muted); font-size:.8rem; margin-bottom:24px; }
+.modal input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; color:var(--text); font-family:'DM Mono',monospace; font-size:1rem; margin-bottom:14px; }
+.modal input:focus { outline:none; border-color:var(--accent); }
+.modal button { width:100%; padding:13px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:12px; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:.95rem; cursor:pointer; }
+
+/* CARDS */
+.card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px; margin-bottom:24px; position:relative; overflow:hidden; }
+.card::before { content:''; position:absolute; top:-50px; right:-50px; width:150px; height:150px; background:radial-gradient(circle,rgba(108,99,255,.1) 0%,transparent 70%); pointer-events:none; }
+.card-title { font-family:'Syne',sans-serif; font-size:.75rem; font-weight:600; color:var(--accent3); text-transform:uppercase; letter-spacing:.09em; margin-bottom:20px; }
+
+/* FORM */
+.form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:16px; }
+.field label { display:block; font-size:.68rem; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.07em; }
+.field input,.field select { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:9px 12px; color:var(--text); font-family:'DM Mono',monospace; font-size:.88rem; transition:border-color .2s; -webkit-appearance:none; }
+.field input:focus,.field select:focus { outline:none; border-color:var(--accent); }
+.field input[type=date]::-webkit-calendar-picker-indicator { filter:invert(.7); cursor:pointer; }
+.mood-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:5px; }
+.mood-btn { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 12px; color:var(--muted); font-size:1rem; cursor:pointer; transition:all .2s; }
+.mood-btn:hover,.mood-btn.active { border-color:var(--accent); background:rgba(108,99,255,.15); transform:scale(1.1); }
+.btn-primary { width:100%; padding:13px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:12px; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:.95rem; cursor:pointer; margin-top:8px; transition:opacity .2s,transform .1s; }
+.btn-primary:hover { opacity:.9; transform:translateY(-1px); }
+
+/* STATS */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; text-align:center; transition:transform .2s; }
+.stat-card:hover { transform:translateY(-3px); }
+.stat-val { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--accent3)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.stat-label { font-size:.65rem; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:.07em; }
+
+/* CHART */
+.chart-bars { display:flex; align-items:flex-end; gap:7px; height:110px; padding-bottom:2px; }
+.bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; height:100%; justify-content:flex-end; }
+.bar { width:100%; border-radius:5px 5px 0 0; min-height:3px; transition:height .5s ease; }
+.bar-label { font-size:.58rem; color:var(--muted); white-space:nowrap; }
+.bar-val { font-size:.62rem; color:var(--text); }
+.chart-ref { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:.68rem; color:var(--muted); }
+.chart-ref-line { height:1px; width:28px; border-top:1px dashed var(--good); }
+
+/* HISTORY */
+.entry { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); animation:fadeIn .3s ease; }
+.entry:last-child { border-bottom:none; }
+.entry-date { font-size:.72rem; color:var(--muted); min-width:88px; }
+.entry-hours { font-family:'Syne',sans-serif; font-weight:700; font-size:1.1rem; min-width:42px; }
+.entry-quality { font-size:.7rem; padding:2px 9px; border-radius:20px; }
+.q-good { background:rgba(63,255,168,.1); color:var(--good); }
+.q-ok   { background:rgba(255,204,68,.1);  color:var(--warn); }
+.q-bad  { background:rgba(255,77,106,.1);  color:var(--bad); }
+.entry-mood { font-size:1rem; }
+.entry-notes { font-size:.7rem; color:var(--muted); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.entry-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:.9rem; transition:color .2s; margin-left:auto; }
+.entry-del:hover { color:var(--bad); }
+.empty { text-align:center; padding:36px; color:var(--muted); font-size:.82rem; }
+.empty .ico { font-size:2.2rem; display:block; margin-bottom:10px; }
+
+/* LEADERBOARD */
+.lb-row { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); transition:background .2s; }
+.lb-row:last-child { border-bottom:none; }
+.lb-rank { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; min-width:32px; }
+.rank-1 { background:linear-gradient(135deg,#ffd700,#ffaa00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.rank-2 { background:linear-gradient(135deg,#c0c0c0,#888); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.rank-3 { background:linear-gradient(135deg,#cd7f32,#8b4e00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.lb-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:700; font-size:.85rem; flex-shrink:0; }
+.lb-name { font-family:'Syne',sans-serif; font-weight:600; font-size:.9rem; }
+.lb-sub { font-size:.65rem; color:var(--muted); }
+.lb-stat { margin-left:auto; text-align:right; }
+.lb-stat .big { font-family:'Syne',sans-serif; font-weight:700; font-size:1.1rem; }
+.lb-badge { font-size:.65rem; padding:2px 8px; border-radius:20px; margin-top:3px; display:inline-block; }
+.lb-me { background:rgba(108,99,255,.12); border-radius:12px; padding:0 10px; }
+.lb-crown { font-size:.9rem; margin-left:4px; }
+
+/* COMPARE */
+.compare-select { display:grid; grid-template-columns:1fr auto 1fr; gap:14px; align-items:center; margin-bottom:24px; }
+.compare-select select { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:9px 12px; color:var(--text); font-family:'DM Mono',monospace; font-size:.88rem; -webkit-appearance:none; }
+.compare-vs { color:var(--muted); font-family:'Syne',sans-serif; font-weight:700; text-align:center; }
+.compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.cmp-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:22px; }
+.cmp-card.highlight { border-color:var(--accent); }
+.cmp-name { font-family:'Syne',sans-serif; font-weight:700; font-size:1rem; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.cmp-stat { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:.8rem; }
+.cmp-stat:last-child { border-bottom:none; }
+.cmp-stat .label { color:var(--muted); }
+.cmp-stat .val { font-family:'Syne',sans-serif; font-weight:600; }
+.win { color:var(--good); }
+.lose { color:var(--bad); }
+.tie { color:var(--warn); }
+
+/* TOAST */
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--accent); color:#fff; padding:11px 22px; border-radius:40px; font-size:.82rem; font-family:'Syne',sans-serif; font-weight:600; transition:transform .3s ease; z-index:100; pointer-events:none; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* CURRENT USER BADGE */
+.user-badge { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:40px; padding:8px 16px 8px 10px; margin-bottom:28px; width:fit-content; }
+.user-badge .av { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-weight:700; font-size:.8rem; }
+.user-badge .info { font-size:.78rem; }
+.user-badge .info span { color:var(--muted); }
+.user-badge .switch { background:none; border:none; color:var(--muted); font-size:.7rem; cursor:pointer; margin-left:8px; font-family:'DM Mono',monospace; text-decoration:underline; }
+.user-badge .switch:hover { color:var(--text); }
+
+@keyframes fadeDown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp   { from{opacity:0;transform:translateY(18px)}  to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="moon">🌙</span>
+    <h1>Sleep Tracker</h1>
+    <p>// track · compare · compete</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('my')">My Sleep</button>
+    <button class="tab" onclick="switchTab('leaderboard')">Leaderboard</button>
+    <button class="tab" onclick="switchTab('compare')">Compare</button>
+  </div>
+
+  <!-- MY SLEEP PAGE -->
+  <div id="page-my" class="page active">
+    <div id="user-badge-area"></div>
+    <div class="card">
+      <div class="card-title">// log tonight's sleep</div>
+      <div class="form-grid">
+        <div class="field"><label>Date</label><input type="date" id="inp-date"></div>
+        <div class="field"><label>Bedtime</label><input type="time" id="inp-bed"></div>
+        <div class="field"><label>Wake time</label><input type="time" id="inp-wake"></div>
+        <div class="field"><label>Quality</label>
+          <select id="inp-quality">
+            <option value="good">😴 Good</option>
+            <option value="ok">😐 OK</option>
+            <option value="bad">😩 Bad</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label>Morning mood</label>
+        <div class="mood-row" id="mood-row">
+          <button class="mood-btn" data-mood="😄">😄</button>
+          <button class="mood-btn active" data-mood="🙂">🙂</button>
+          <button class="mood-btn" data-mood="😐">😐</button>
+          <button class="mood-btn" data-mood="😴">😴</button>
+          <button class="mood-btn" data-mood="😣">😣</button>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:16px">
+        <label>Notes (optional)</label>
+        <input type="text" id="inp-notes" placeholder="e.g. had coffee late…" style="width:100%">
+      </div>
+      <button class="btn-primary" onclick="logSleep()">+ Log Sleep</button>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-val" id="stat-avg">—</div><div class="stat-label">Avg hrs/night</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Total entries</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-best">—</div><div class="stat-label">Best night</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-streak">—</div><div class="stat-label">8h+ streak</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">// last 7 nights</div>
+      <div class="chart-bars" id="chart-bars"><div class="empty" style="width:100%"><span class="ico">📊</span>No data yet</div></div>
+      <div class="chart-ref"><div class="chart-ref-line"></div>Recommended: 8 hours</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">// sleep history</div>
+      <div id="history-list"><div class="empty"><span class="ico">🌙</span>No sleep logged yet.</div></div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD PAGE -->
+  <div id="page-leaderboard" class="page">
+    <div class="card">
+      <div class="card-title">// top sleepers — avg hours/night</div>
+      <div id="lb-list"><div class="empty"><span class="ico">🏆</span>No data yet. Be the first to log sleep!</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">// most consistent (8h+ streak)</div>
+      <div id="lb-streak"><div class="empty"><span class="ico">🔥</span>No streaks yet.</div></div>
+    </div>
+  </div>
+
+  <!-- COMPARE PAGE -->
+  <div id="page-compare" class="page">
+    <div class="card">
+      <div class="card-title">// head to head comparison</div>
+      <div class="compare-select">
+        <div class="field"><label>Player 1</label><select id="cmp-a"></select></div>
+        <div class="compare-vs">VS</div>
+        <div class="field"><label>Player 2</label><select id="cmp-b"></select></div>
+      </div>
+      <div id="compare-result"><div class="empty"><span class="ico">⚔️</span>Select two users to compare.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- USERNAME MODAL -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="moon-big">🌙</div>
+    <h2>Welcome!</h2>
+    <p>Enter a username to track and compare your sleep with others.</p>
+    <input type="text" id="modal-username" placeholder="e.g. sleepy_dev" maxlength="20">
+    <button onclick="setUsername()">Start Tracking</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const AVATARS_BG = ['#6c63ff','#ff5fa0','#4fd9ff','#3fffa8','#ffcc44','#ff7b44','#b44fff'];
+function avatarColor(name) { let h=0; for(let c of name) h=(h*31+c.charCodeAt(0))%AVATARS_BG.length; return AVATARS_BG[h]; }
+function initials(name) { return name.slice(0,2).toUpperCase(); }
+
+// ── STORAGE ──
+function getAllData() { return JSON.parse(localStorage.getItem('sleepMulti') || '{}'); }
+function saveAllData(d) { localStorage.setItem('sleepMulti', JSON.stringify(d)); }
+function getUserData(u) { const d=getAllData(); return d[u]||[]; }
+function saveUserData(u,arr) { const d=getAllData(); d[u]=arr; saveAllData(d); }
+
+// ── STATE ──
+let currentUser = localStorage.getItem('sleepUser') || '';
+let selectedMood = '🙂';
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('inp-date').value = today;
+
+// ── MODAL ──
+if (currentUser) document.getElementById('modal-bg').style.display='none';
+document.getElementById('modal-username').addEventListener('keydown', e => { if(e.key==='Enter') setUsername(); });
+
+function setUsername() {
+  const v = document.getElementById('modal-username').value.trim();
+  if (!v) return;
+  currentUser = v.toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if (!currentUser) { showToast('⚠️ Use letters/numbers/underscore only'); return; }
+  localStorage.setItem('sleepUser', currentUser);
+  document.getElementById('modal-bg').style.display='none';
+  renderAll();
+}
+
+function switchUser() {
+  currentUser = '';
+  localStorage.removeItem('sleepUser');
+  document.getElementById('modal-bg').style.display='flex';
+  document.getElementById('modal-username').value='';
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['my','leaderboard','compare'][i]===tab));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  renderAll();
+}
+
+// ── MOOD ──
+document.getElementById('mood-row').addEventListener('click', e => {
+  const btn = e.target.closest('.mood-btn'); if(!btn) return;
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); selectedMood = btn.dataset.mood;
+});
+
+// ── CALC ──
+function calcHours(bed,wake) {
+  const [bh,bm]=bed.split(':').map(Number), [wh,wm]=wake.split(':').map(Number);
+  let m=(wh*60+wm)-(bh*60+bm); if(m<0)m+=1440; return +(m/60).toFixed(1);
+}
+function hColor(h) { return h>=7.5?'var(--good)':h>=6?'var(--warn)':'var(--bad)'; }
+function qClass(q) { return q==='good'?'q-good':q==='ok'?'q-ok':'q-bad'; }
+function qLabel(q) { return q==='good'?'Good':q==='ok'?'OK':'Bad'; }
+function fmtDate(d) { return new Date(d+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}); }
+function fmtDay(d)  { return new Date(d+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short'}); }
+
+function userStats(arr) {
+  if(!arr.length) return null;
+  const avg = +(arr.reduce((s,e)=>s+e.hours,0)/arr.length).toFixed(1);
+  const best = Math.max(...arr.map(e=>e.hours));
+  const sorted=[...arr].sort((a,b)=>b.date.localeCompare(a.date));
+  let streak=0; for(const e of sorted){if(e.hours>=8)streak++;else break;}
+  const goodPct = Math.round(arr.filter(e=>e.quality==='good').length/arr.length*100);
+  return {avg,best,streak,entries:arr.length,goodPct};
+}
+
+// ── LOG ──
+function logSleep() {
+  if(!currentUser){showToast('⚠️ Set username first');return;}
+  const date=document.getElementById('inp-date').value;
+  const bed=document.getElementById('inp-bed').value;
+  const wake=document.getElementById('inp-wake').value;
+  const quality=document.getElementById('inp-quality').value;
+  const notes=document.getElementById('inp-notes').value.trim();
+  if(!date||!bed||!wake){showToast('⚠️ Fill in date, bedtime & wake time!');return;}
+  const hours=calcHours(bed,wake);
+  const data=getUserData(currentUser);
+  const idx=data.findIndex(e=>e.date===date);
+  const entry={date,bed,wake,hours,quality,mood:selectedMood,notes};
+  if(idx>=0)data[idx]=entry; else data.unshift(entry);
+  data.sort((a,b)=>b.date.localeCompare(a.date));
+  saveUserData(currentUser,data);
+  document.getElementById('inp-notes').value='';
+  renderAll();
+  showToast(`✓ Logged ${hours}h for ${fmtDate(date)}`);
+}
+
+// ── RENDER ──
+function renderAll() {
+  renderUserBadge();
+  renderMySleep();
+  renderLeaderboard();
+  renderCompare();
+}
+
+function renderUserBadge() {
+  const el=document.getElementById('user-badge-area');
+  if(!currentUser){el.innerHTML='';return;}
+  const col=avatarColor(currentUser);
+  el.innerHTML=`<div class="user-badge">
+    <div class="av" style="background:${col};color:#fff">${initials(currentUser)}</div>
+    <div class="info">Logged in as <strong>${currentUser}</strong><br><span>Your sleep data is saved locally</span></div>
+    <button class="switch" onclick="switchUser()">switch</button>
+  </div>`;
+}
+
+function renderMySleep() {
+  if(!currentUser) return;
+  const data=getUserData(currentUser);
+  const st=userStats(data);
+
+  document.getElementById('stat-avg').textContent   = st ? st.avg+'h' : '—';
+  document.getElementById('stat-total').textContent = st ? st.entries : '—';
+  document.getElementById('stat-best').textContent  = st ? st.best+'h' : '—';
+  document.getElementById('stat-streak').textContent= st ? st.streak+'🔥' : '—';
+
+  // Chart
+  const chartEl=document.getElementById('chart-bars');
+  const last7=[...data].sort((a,b)=>a.date.localeCompare(b.date)).slice(-7);
+  if(!last7.length) {
+    chartEl.innerHTML='<div class="empty" style="width:100%"><span class="ico">📊</span>No data yet</div>';
+  } else {
+    const maxH=Math.max(...last7.map(e=>e.hours),10);
+    chartEl.innerHTML=last7.map(e=>{
+      const pct=(e.hours/maxH*100).toFixed(1), col=hColor(e.hours);
+      return `<div class="bar-wrap">
+        <div class="bar-val" style="color:${col}">${e.hours}h</div>
+        <div class="bar" style="height:${pct}%;background:${col}55;border-top:2px solid ${col}"></div>
+        <div class="bar-label">${fmtDay(e.date)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // History
+  const listEl=document.getElementById('history-list');
+  if(!data.length) {
+    listEl.innerHTML='<div class="empty"><span class="ico">🌙</span>No sleep logged yet.</div>';
+  } else {
+    listEl.innerHTML=data.map(e=>`
+      <div class="entry">
+        <span class="entry-date">${fmtDate(e.date)}</span>
+        <span class="entry-hours" style="color:${hColor(e.hours)}">${e.hours}h</span>
+        <span class="entry-quality ${qClass(e.quality)}">${qLabel(e.quality)}</span>
+        <span class="entry-mood">${e.mood}</span>
+        ${e.notes?`<span class="entry-notes">${e.notes}</span>`:'<span class="entry-notes"></span>'}
+        <button class="entry-del" onclick="delEntry('${e.date}')">✕</button>
+      </div>`).join('');
+  }
+}
+
+function delEntry(date) {
+  const data=getUserData(currentUser).filter(e=>e.date!==date);
+  saveUserData(currentUser,data); renderAll();
+}
+
+function renderLeaderboard() {
+  const all=getAllData();
+  const users=Object.keys(all).filter(u=>all[u].length>0);
+  if(!users.length) return;
+
+  // by avg
+  const ranked=[...users].map(u=>({u,st:userStats(all[u])}))
+    .filter(x=>x.st).sort((a,b)=>b.st.avg-a.st.avg);
+
+  const lbEl=document.getElementById('lb-list');
+  lbEl.innerHTML=ranked.map((x,i)=>{
+    const col=avatarColor(x.u);
+    const rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+    const isMe=x.u===currentUser;
+    const badge=x.st.avg>=8?`<span class="lb-badge" style="background:rgba(63,255,168,.12);color:var(--good)">great</span>`:
+                 x.st.avg>=6?`<span class="lb-badge" style="background:rgba(255,204,68,.12);color:var(--warn)">ok</span>`:
+                 `<span class="lb-badge" style="background:rgba(255,77,106,.12);color:var(--bad)">low</span>`;
+    return `<div class="lb-row ${isMe?'lb-me':''}">
+      <div class="lb-rank ${rankClass}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
+      <div class="lb-avatar" style="background:${col};color:#fff">${initials(x.u)}</div>
+      <div>
+        <div class="lb-name">${x.u}${isMe?'<span class="lb-crown"> ← you</span>':''}</div>
+        <div class="lb-sub">${x.st.entries} nights · ${x.st.goodPct}% good quality</div>
+      </div>
+      <div class="lb-stat">
+        <div class="big" style="color:${hColor(x.st.avg)}">${x.st.avg}h</div>
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
+
+  // by streak
+  const streakRanked=[...users].map(u=>({u,st:userStats(all[u])}))
+    .filter(x=>x.st&&x.st.streak>0).sort((a,b)=>b.st.streak-a.st.streak);
+
+  const strEl=document.getElementById('lb-streak');
+  if(!streakRanked.length){strEl.innerHTML='<div class="empty"><span class="ico">🔥</span>No 8h+ streaks yet.</div>';return;}
+  strEl.innerHTML=streakRanked.map((x,i)=>{
+    const col=avatarColor(x.u), isMe=x.u===currentUser;
+    return `<div class="lb-row ${isMe?'lb-me':''}">
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-avatar" style="background:${col};color:#fff">${initials(x.u)}</div>
+      <div>
+        <div class="lb-name">${x.u}${isMe?' ← you':''}</div>
+        <div class="lb-sub">Best: ${x.st.best}h</div>
+      </div>
+      <div class="lb-stat">
+        <div class="big" style="color:var(--warn)">${x.st.streak} 🔥</div>
+        <span style="font-size:.62rem;color:var(--muted)">nights ≥8h</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCompare() {
+  const all=getAllData();
+  const users=Object.keys(all).filter(u=>all[u].length>0);
+
+  const selA=document.getElementById('cmp-a');
+  const selB=document.getElementById('cmp-b');
+  const prevA=selA.value, prevB=selB.value;
+
+  selA.innerHTML=users.map(u=>`<option value="${u}">${u}</option>`).join('');
+  selB.innerHTML=users.map(u=>`<option value="${u}">${u}</option>`).join('');
+
+  if(prevA&&users.includes(prevA)) selA.value=prevA;
+  if(prevB&&users.includes(prevB)) selB.value=prevB; else if(users.length>1) selB.selectedIndex=1;
+
+  renderCmpResult();
+}
+
+function renderCmpResult() {
+  const all=getAllData();
+  const a=document.getElementById('cmp-a').value;
+  const b=document.getElementById('cmp-b').value;
+  const el=document.getElementById('compare-result');
+
+  if(!a||!b||a===b){
+    el.innerHTML='<div class="empty"><span class="ico">⚔️</span>Select two different users.</div>';return;
+  }
+  const stA=userStats(getUserData(a)), stB=userStats(getUserData(b));
+  if(!stA||!stB){el.innerHTML='<div class="empty"><span class="ico">⚔️</span>Both users need at least one entry.</div>';return;}
+
+  function cmp(va,vb,higherBetter=true) {
+    if(va===vb) return ['tie','tie'];
+    const aWins=higherBetter?va>vb:va<vb;
+    return aWins?['win','lose']:['lose','win'];
+  }
+
+  const [avgA,avgB]=cmp(stA.avg,stB.avg);
+  const [bestA,bestB]=cmp(stA.best,stB.best);
+  const [strA,strB]=cmp(stA.streak,stB.streak);
+  const [gA,gB]=cmp(stA.goodPct,stB.goodPct);
+  const [entA,entB]=cmp(stA.entries,stB.entries);
+
+  const colA=avatarColor(a), colB=avatarColor(b);
+
+  const wins={a:0,b:0};
+  for(const[x,y] of [[avgA,avgB],[bestA,bestB],[strA,strB],[gA,gB]]){
+    if(x==='win')wins.a++; if(y==='win')wins.b++;
+  }
+  const overall = wins.a>wins.b?'a':wins.b>wins.a?'b':'tie';
+
+  el.innerHTML=`
+    <div style="text-align:center;margin-bottom:20px;font-family:'Syne',sans-serif;font-size:.8rem;color:var(--muted)">
+      ${overall==='tie'?'<span style="color:var(--warn)">⚡ It\'s a tie!</span>':
+        `<span style="color:var(--good)">🏆 ${overall==='a'?a:b} wins (${Math.max(wins.a,wins.b)}–${Math.min(wins.a,wins.b)})</span>`}
+    </div>
+    <div class="compare-grid">
+      <div class="cmp-card ${overall==='a'?'highlight':''}">
+        <div class="cmp-name"><div style="width:28px;height:28px;border-radius:50%;background:${colA};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff">${initials(a)}</div>${a}${a===currentUser?' (you)':''}</div>
+        ${row('Avg sleep',stA.avg+'h',stB.avg+'h',avgA)}
+        ${row('Best night',stA.best+'h',stB.best+'h',bestA)}
+        ${row('8h+ streak',stA.streak+'🔥',stB.streak+'🔥',strA)}
+        ${row('Good quality',stA.goodPct+'%',stB.goodPct+'%',gA)}
+        ${row('Entries',stA.entries,stB.entries,entA)}
+      </div>
+      <div class="cmp-card ${overall==='b'?'highlight':''}">
+        <div class="cmp-name"><div style="width:28px;height:28px;border-radius:50%;background:${colB};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff">${initials(b)}</div>${b}${b===currentUser?' (you)':''}</div>
+        ${row('Avg sleep',stB.avg+'h',stA.avg+'h',avgB)}
+        ${row('Best night',stB.best+'h',stA.best+'h',bestB)}
+        ${row('8h+ streak',stB.streak+'🔥',stA.streak+'🔥',strB)}
+        ${row('Good quality',stB.goodPct+'%',stA.goodPct+'%',gB)}
+        ${row('Entries',stB.entries,stA.entries,entB)}
+      </div>
+    </div>`;
+}
+
+function row(label,myVal,theirVal,cls){
+  const icon=cls==='win'?'↑':cls==='lose'?'↓':'=';
+  return `<div class="cmp-stat"><span class="label">${label}</span><span class="val ${cls}">${myVal} ${icon}</span></div>`;
+}
+
+document.getElementById('cmp-a').addEventListener('change',renderCmpResult);
+document.getElementById('cmp-b').addEventListener('change',renderCmpResult);
+
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+renderAll();
+</script>
+</body>
+</html>
